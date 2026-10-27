@@ -61,11 +61,16 @@ jobs:
         shell: bash
         env:
           SHA: ${{ steps.meta.outputs.sha }}
+          APP_TOKEN: ${{ secrets.APP_REPO_READ_TOKEN }}
         run: |
           set -euo pipefail
 
           git cat-file -e "${SHA}^{commit}"
-          git fetch origin main
+
+          AUTH=$(printf 'x-access-token:%s' "$APP_TOKEN" | base64 -w 0)
+
+          git -c http.extraheader="AUTHORIZATION: basic $AUTH" \
+            fetch origin main
 
           git merge-base --is-ancestor "$SHA" origin/main || {
             echo "Commit is not reachable from Oscar main"
