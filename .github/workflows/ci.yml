@@ -79,14 +79,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Build and push backend
         uses: docker/build-push-action@v6
         with:
-          context: app
+          context: app/Backend
           push: true
-          tags: ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta.outputs.image }}-backend:${{ steps.meta.outputs.tag }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: app/Frontend
+          push: true
+          tags: ${{ steps.meta.outputs.image }}-frontend:${{ steps.meta.outputs.tag }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
 
       - name: Update GitOps manifest
         working-directory: infra
@@ -106,8 +115,8 @@ jobs:
 
           COUNT=$(grep -Ec '^[[:space:]]*newTag:' "$F" || true)
 
-          [[ "$COUNT" -eq 1 ]] || {
-            echo "Expected exactly one newTag field in $F"
+          [[ "$COUNT" -eq 2 ]] || {
+            echo "Expected exactly two newTag fields in $F"
             exit 1
           }
 
