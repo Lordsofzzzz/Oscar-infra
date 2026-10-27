@@ -8,7 +8,6 @@ on:
 env:
   APP_NAME: myapp
 
-# Serialize updates to the GitOps branch.
 concurrency:
   group: gitops-deploy-main
   cancel-in-progress: false
@@ -24,9 +23,9 @@ jobs:
     steps:
       - name: Set tag
         id: meta
+        shell: bash
         env:
           SHA: ${{ github.event.client_payload.sha }}
-        shell: bash
         run: |
           set -euo pipefail
 
@@ -46,11 +45,12 @@ jobs:
         with:
           ref: main
           path: infra
+          persist-credentials: true
 
-      - name: Checkout application
+      - name: Checkout private application
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.APP_REPO }}
+          repository: c0dem0de/Oscar
           token: ${{ secrets.APP_REPO_READ_TOKEN }}
           ref: ${{ steps.meta.outputs.sha }}
           path: app
@@ -58,17 +58,17 @@ jobs:
 
       - name: Verify application commit
         working-directory: app
+        shell: bash
         env:
           SHA: ${{ steps.meta.outputs.sha }}
         run: |
           set -euo pipefail
 
           git cat-file -e "${SHA}^{commit}"
-
-          # Optional: enforce deployment from the application's main branch.
           git fetch origin main
+
           git merge-base --is-ancestor "$SHA" origin/main || {
-            echo "Commit is not reachable from app main"
+            echo "Commit is not reachable from Oscar main"
             exit 1
           }
 
@@ -91,10 +91,10 @@ jobs:
 
       - name: Update GitOps manifest
         working-directory: infra
+        shell: bash
         env:
           SHA: ${{ steps.meta.outputs.sha }}
           TAG: ${{ steps.meta.outputs.tag }}
-        shell: bash
         run: |
           set -euo pipefail
 
@@ -115,17 +115,18 @@ jobs:
           sed -i -E \
             "s|^([[:space:]]*newTag: ).*|\1${TAG}|" "$F"
 
-          git diff --quiet -- "$F" && {
+          if git diff --quiet -- "$F"; then
             echo "Image tag is already up to date"
             exit 0
-          }
+          fi
 
           git config user.name "ci-bot"
           git config user.email \
             "ci-bot@users.noreply.github.com"
 
           git add "$F"
-          git commit -m "deploy(${APP_NAME}): ${TAG}" \
+          git commit \
+            -m "deploy(${APP_NAME}): ${TAG}" \
             -m "app commit: ${SHA}"
 
           git pull --rebase origin main
