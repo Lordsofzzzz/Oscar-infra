@@ -54,7 +54,7 @@ jobs:
           token: ${{ secrets.APP_REPO_READ_TOKEN }}
           ref: ${{ steps.meta.outputs.sha }}
           path: app
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Verify application commit
         working-directory: app
