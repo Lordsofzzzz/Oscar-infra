@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oscar-frontend
+  namespace: oscar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oscar-frontend
+  template:
+    metadata:
+      labels:
+        app: oscar-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/lordsofzzzz/oscar-frontend:main-9dac4a7   # CHECK: owner, replace tag after first build
+          ports:
+            - containerPort: 80                                     # CHANGE: your frontend port
+          readinessProbe:
+            tcpSocket:
+              port: 80                                              # CHANGE: same port
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80                                              # CHANGE: same port
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oscar-frontend
+  namespace: oscar
+spec:
+  selector:
+    app: oscar-frontend
+  ports:
+    - port: 80
+      targetPort: 80                                                # CHANGE: same port
