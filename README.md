@@ -11,6 +11,7 @@ Push code, get a built arm64 image, and watch Flux roll it out to a self-hosted 
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 ![GHCR](https://img.shields.io/badge/Registry-GHCR-181717?logo=github&logoColor=white)
+![Cloudflare Tunnel](https://img.shields.io/badge/Cloudflare-Tunnel-F38020?logo=cloudflare&logoColor=white)
 ![Raspberry Pi 5](https://img.shields.io/badge/Raspberry%20Pi-5%20(arm64)-C51A4A?logo=raspberrypi&logoColor=white)
 
 </div>
@@ -25,7 +26,7 @@ This repository is the **infrastructure and deployment layer** for [Oscar](https
 - A **GitHub Actions** pipeline that builds multi-service container images and updates the manifests automatically
 - Everything needed to rebuild the cluster state from Git alone
 
-Both Flux and the application run on a single **Raspberry Pi 5**, so the whole delivery loop is self-hosted, low-cost, and reproducible.
+Both Flux and the application run on a single **Raspberry Pi 5**, so the whole delivery loop is self-hosted, low-cost, and reproducible. The app is exposed to the internet through a **Cloudflare Tunnel**, so the Pi needs no open inbound ports and no port forwarding on the home router.
 
 ## Architecture
 
@@ -41,13 +42,17 @@ flowchart LR
     end
 
     subgraph PI["Raspberry Pi 5 (arm64)"]
-        flux["Flux CD<br/>source + kustomize controllers"]
-        subgraph NS["namespace: oscar"]
-            fe["oscar-frontend<br/>NodePort 30173"]
-            be["oscar-backend<br/>ClusterIP 5677"]
+        cfd["cloudflared<br/>runs on the Pi host"]
+        subgraph K8S["Kubernetes cluster"]
+            flux["Flux CD<br/>source + kustomize controllers"]
+            subgraph NS["namespace: oscar"]
+                fe["oscar-frontend<br/>NodePort 30173"]
+                be["oscar-backend<br/>ClusterIP 5677"]
+            end
         end
     end
 
+    cf["Cloudflare edge<br/>public hostname + TLS"]
     user([User browser])
 
     dev -->|git push| app
@@ -57,7 +62,9 @@ flowchart LR
     flux -->|"poll every 1m"| infra
     flux -->|apply| NS
     ghcr -->|image pull| NS
-    user -->|"http://pi-ip:30173"| fe
+    user -->|HTTPS| cf
+    cf <-->|"outbound-only tunnel"| cfd
+    cfd -->|"localhost:30173"| fe
     fe -.->|in-cluster API calls| be
 ```
 
@@ -98,6 +105,7 @@ Git is the single source of truth. To change what runs in the cluster, change a 
 | GitOps controller | Flux CD |
 | CI | GitHub Actions (Buildx + QEMU) |
 | Container registry | GitHub Container Registry (GHCR) |
+| Public access | Cloudflare Tunnel (`cloudflared`) |
 | Config | Plain Kubernetes YAML + Kustomize (via Flux) |
 
 ## Repository layout
@@ -136,7 +144,27 @@ Both run in the `oscar` namespace with TCP readiness and liveness probes and res
 | backend | 50m | 128Mi | 512Mi |
 | frontend | 25m | 64Mi | 256Mi |
 
-Open the app at `http://<pi-ip>:30173`.
+**Access**
+- Public: through the Cloudflare Tunnel hostname (HTTPS, terminated at Cloudflare's edge).
+- Local network: `http://<pi-ip>:30173`.
+
+## Public access with Cloudflare Tunnel
+
+The Pi sits behind a home network, so instead of port forwarding, `cloudflared`, which runs directly on the Pi host (not as a pod), opens an **outbound** connection to Cloudflare. Cloudflare routes requests for the public hostname through that tunnel to the frontend NodePort on the Pi.
+
+```mermaid
+flowchart LR
+    u([User]) -->|"https://your-domain"| cf["Cloudflare edge<br/>TLS + DDoS protection"]
+    cf <-->|"encrypted outbound tunnel"| cfd["cloudflared<br/>runs directly on the Pi host"]
+    cfd -->|"localhost:30173"| fe["oscar-frontend<br/>NodePort"]
+    fe -.-> be["oscar-backend<br/>ClusterIP"]
+```
+
+Why a tunnel:
+- No inbound ports opened on the router, so the Pi's IP is never exposed.
+- Works behind CGNAT and dynamic IPs.
+- TLS certificates and DDoS protection come from Cloudflare at no extra setup.
+- The backend stays internal (`ClusterIP`) and is never published directly.
 
 ## Pipeline details
 
@@ -218,6 +246,7 @@ flux reconcile kustomization flux-system
 - **Separate app and infra repos.** Application code and deployment config change at different rates and need different access controls.
 - **Immutable, traceable tags.** Images are tagged with the source commit SHA, never `latest`, so a running pod always maps to an exact commit.
 - **Native arm64 images.** Built with Buildx and QEMU for the Pi 5, avoiding emulation at runtime.
+- **Zero inbound exposure.** Cloudflare Tunnel uses outbound connections only, which removes router port forwarding and hides the Pi's real IP.
 - **Right-sized resources.** Requests and memory limits keep both services predictable on a small single-node cluster.
 
 ## Notes
@@ -226,7 +255,14 @@ flux reconcile kustomization flux-system
 - The backend port `5677` appears several times in `backend.yml`. Change all occurrences together.
 - Do not hand-edit generated files in `flux-system/`.
 
+## Roadmap
 
+- [ ] Ingress controller behind the tunnel instead of a raw NodePort
+- [ ] Move `cloudflared` into the cluster as a Flux-managed Deployment
+- [ ] Encrypted secrets with SOPS or Sealed Secrets
+- [ ] Monitoring with Prometheus and Grafana
+- [ ] Image update automation and rollout notifications
+- [ ] Staging environment
 
 ## License
 
