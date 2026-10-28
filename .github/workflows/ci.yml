@@ -55,3 +55,18 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ env.IMAGE }}-frontend:${{ env.TAG }}
+
+      - name: Checkout infra repo
+        uses: actions/checkout@v4
+        with:
+          path: infra
+
+      - name: Bump image tags
+        working-directory: infra
+        run: |
+          sed -i -E "s|(image: ${IMAGE}-backend):.*|\1:${TAG}|" clusters/my-cluster/oscar/backend.yml
+          sed -i -E "s|(image: ${IMAGE}-frontend):.*|\1:${TAG}|" clusters/my-cluster/oscar/frontend.yml
+          git config user.name ci-bot
+          git config user.email ci-bot@users.noreply.github.com
+          git commit -am "deploy: ${TAG}"
+          git push
