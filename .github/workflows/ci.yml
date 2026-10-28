@@ -1,141 +1,57 @@
-name: ci
+name: build
 
 on:
   repository_dispatch:
     types: [app-build]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
 
 env:
-  APP_NAME: myapp
-
-concurrency:
-  group: gitops-deploy-main
-  cancel-in-progress: false
+  APP_NAME: oscar
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-      packages: write
-
+    timeout-minutes: 45
     steps:
-      - name: Set tag
-        id: meta
-        shell: bash
-        env:
-          SHA: ${{ github.event.client_payload.sha }}
-        run: |
-          set -euo pipefail
-
-          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || {
-            echo "Invalid commit SHA"
-            exit 1
-          }
-
-          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
-
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-          echo "tag=main-${SHA:0:7}" >> "$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${OWNER}/${APP_NAME}" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout infrastructure
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          path: infra
-          persist-credentials: true
-
-      - name: Checkout private application
+      - name: Checkout code repo
         uses: actions/checkout@v4
         with:
           repository: c0dem0de/Oscar
+          ref: main
           token: ${{ secrets.APP_REPO_READ_TOKEN }}
-          ref: ${{ steps.meta.outputs.sha }}
           path: app
-          fetch-depth: 0
-          persist-credentials: false
 
-      - name: Verify application commit
-        working-directory: app
-        shell: bash
-        env:
-          SHA: ${{ steps.meta.outputs.sha }}
-        run: |
-          set -euo pipefail
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-          git merge-base --is-ancestor "$SHA" origin/main || {
-            echo "Commit is not reachable from Oscar main"
-            exit 1
-          }
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set image and tag
+        run: |
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "IMAGE=ghcr.io/${OWNER}/${APP_NAME}" >> "$GITHUB_ENV"
+          echo "TAG=main-$(git -C app rev-parse --short=7 HEAD)" >> "$GITHUB_ENV"
+
       - name: Build and push backend
         uses: docker/build-push-action@v6
         with:
           context: app/Backend
+          platforms: linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.image }}-backend:${{ steps.meta.outputs.tag }}
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
+          tags: ${{ env.IMAGE }}-backend:${{ env.TAG }}
 
       - name: Build and push frontend
         uses: docker/build-push-action@v6
         with:
           context: app/Frontend
+          platforms: linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.image }}-frontend:${{ steps.meta.outputs.tag }}
-          cache-from: type=gha,scope=frontend
-          cache-to: type=gha,mode=max,scope=frontend
-
-      - name: Update GitOps manifest
-        working-directory: infra
-        shell: bash
-        env:
-          SHA: ${{ steps.meta.outputs.sha }}
-          TAG: ${{ steps.meta.outputs.tag }}
-        run: |
-          set -euo pipefail
-
-          F="clusters/my-cluster/apps/${APP_NAME}/kustomization.yaml"
-
-          test -f "$F" || {
-            echo "Manifest not found: $F"
-            exit 1
-          }
-
-          COUNT=$(grep -Ec '^[[:space:]]*newTag:' "$F" || true)
-
-          [[ "$COUNT" -eq 2 ]] || {
-            echo "Expected exactly two newTag fields in $F"
-            exit 1
-          }
-
-          sed -i -E \
-            "s|^([[:space:]]*newTag: ).*|\1${TAG}|" "$F"
-
-          if git diff --quiet -- "$F"; then
-            echo "Image tag is already up to date"
-            exit 0
-          fi
-
-          git config user.name "ci-bot"
-          git config user.email \
-            "ci-bot@users.noreply.github.com"
-
-          git add "$F"
-          git commit \
-            -m "deploy(${APP_NAME}): ${TAG}" \
-            -m "app commit: ${SHA}"
-
-          git pull --rebase origin main
-          git push origin HEAD:main
+          tags: ${{ env.IMAGE }}-frontend:${{ env.TAG }}
