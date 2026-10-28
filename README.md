@@ -226,13 +226,7 @@ flux reconcile kustomization flux-system
 - The backend port `5677` appears several times in `backend.yml`. Change all occurrences together.
 - Do not hand-edit generated files in `flux-system/`.
 
-## Roadmap
 
-- [ ] Ingress with TLS instead of NodePort
-- [ ] Encrypted secrets with SOPS or Sealed Secrets
-- [ ] Monitoring with Prometheus and Grafana
-- [ ] Image update automation and rollout notifications
-- [ ] Staging environment
 
 ## License
 
