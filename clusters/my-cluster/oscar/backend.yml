@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oscar-backend
+  namespace: oscar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oscar-backend
+  template:
+    metadata:
+      labels:
+        app: oscar-backend
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/lordsofzzzz/oscar-backend:main-9dac4a7   # CHECK: owner, replace tag after first build
+          ports:
+            - containerPort: 5677                                  # CHANGE: your backend port
+          readinessProbe:
+            tcpSocket:
+              port: 5677                                           # CHANGE: same port
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5677                                           # CHANGE: same port
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oscar-backend
+  namespace: oscar
+spec:
+  selector:
+    app: oscar-backend
+  ports:
+    - port: 5677
+      targetPort: 5677                                             # CHANGE: same port
