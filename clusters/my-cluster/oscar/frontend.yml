@@ -41,8 +41,10 @@ metadata:
   name: oscar-frontend
   namespace: oscar
 spec:
+  type: NodePort
   selector:
     app: oscar-frontend
   ports:
     - port: 80
-      targetPort: 80                                                # CHANGE: same port
+      targetPort: 80
+      nodePort: 30173
