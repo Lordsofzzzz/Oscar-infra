@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/lordsofzzzz/oscar-frontend:main-9dac4a7   # CHECK: owner, replace tag after first build
+          image: ghcr.io/lordsofzzzz/oscar-frontend:main-6d03001   # CHECK: owner, replace tag after first build
           ports:
             - containerPort: 80                                     # CHANGE: your frontend port
           readinessProbe:
