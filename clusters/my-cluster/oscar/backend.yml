@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/lordsofzzzz/oscar-backend:main-9dac4a7   # CHECK: owner, replace tag after first build
+          image: ghcr.io/lordsofzzzz/oscar-backend:main-6d03001   # CHECK: owner, replace tag after first build
           ports:
             - containerPort: 5677                                  # CHANGE: your backend port
           readinessProbe:
