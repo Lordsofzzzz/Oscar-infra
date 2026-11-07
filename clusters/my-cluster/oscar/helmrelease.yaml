@@ -1,0 +1,14 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: oscar
+  namespace: flux-system
+spec:
+  interval: 10m
+  chart:
+    spec:
+      # chart committed in this same repo, rendered from the flux-system GitRepository
+      chart: ./charts/oscar
+      sourceRef:
+        kind: GitRepository
+        name: flux-system

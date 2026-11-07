@@ -77,8 +77,7 @@ jobs:
       - name: Bump image tags
         working-directory: infra
         run: |
-          sed -i -E "s|(image: ${IMAGE}-backend):.*|\1:${TAG}|" clusters/my-cluster/oscar/backend.yml
-          sed -i -E "s|(image: ${IMAGE}-frontend):.*|\1:${TAG}|" clusters/my-cluster/oscar/frontend.yml
+          sed -i -E "s|(tag: )main-.*|\1${TAG}|" charts/oscar/values.yaml
           git config user.name ci-bot
           git config user.email ci-bot@users.noreply.github.com
           git commit -am "deploy: ${TAG}"
