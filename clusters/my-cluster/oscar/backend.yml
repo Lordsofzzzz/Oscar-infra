@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/lordsofzzzz/oscar-backend:main-fb4438c
+          image: ghcr.io/lordsofzzzz/oscar-backend:main-3ab1a24
           ports:
             - containerPort: 5677                                  # CHANGE: your backend port
           readinessProbe:

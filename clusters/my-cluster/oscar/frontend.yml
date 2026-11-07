@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/lordsofzzzz/oscar-frontend:main-fb4438c
+          image: ghcr.io/lordsofzzzz/oscar-frontend:main-3ab1a24
           ports:
             - containerPort: 8080                                     # CHANGE: your frontend port
           readinessProbe:
