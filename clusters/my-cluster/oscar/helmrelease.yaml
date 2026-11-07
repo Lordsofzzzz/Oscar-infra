@@ -5,6 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m
+  targetNamespace: oscar
   chart:
     spec:
       # chart committed in this same repo, rendered from the flux-system GitRepository
