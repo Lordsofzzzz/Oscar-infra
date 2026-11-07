@@ -13,6 +13,7 @@ spec:
     spec:
       # chart committed in this same repo, rendered from the flux-system GitRepository
       chart: ./charts/oscar
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: flux-system
