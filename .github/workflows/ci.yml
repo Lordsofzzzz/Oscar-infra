@@ -26,6 +26,24 @@ jobs:
           path: app
 
 
+      - name: Backend lint
+        uses: astral-sh/ruff-action@v3
+        with:
+          src: ./app/Backend
+
+      - name: Backend format check
+        uses: astral-sh/ruff-action@v3
+        with:
+          src: ./app/Backend
+          args: format --check
+
+      - name: Frontend lint
+        working-directory: app/Frontend
+        run: |
+          npm ci
+          npm run lint
+
+
       - name: Run Trivy Security Scan
         uses: aquasecurity/trivy-action@master
         with:
