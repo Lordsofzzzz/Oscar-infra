@@ -26,12 +26,16 @@ jobs:
           path: app
 
 
-      - name: Run Trivy Scan
+      - name: Run Trivy Security Scan
         uses: aquasecurity/trivy-action@master
         with:
-            scan-type: 'fs'
-            exit-code: '1'
-            severity: 'CRITICAL,HIGH'
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln,misconfig,secret'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '1'
+          format: 'table'
 
 
       - uses: docker/setup-qemu-action@v3
