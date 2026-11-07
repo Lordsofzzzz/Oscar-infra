@@ -17,15 +17,15 @@ spec:
         - name: frontend
           image: ghcr.io/lordsofzzzz/oscar-frontend:main-fb4438c
           ports:
-            - containerPort: 80                                     # CHANGE: your frontend port
+            - containerPort: 8080                                     # CHANGE: your frontend port
           readinessProbe:
             tcpSocket:
-              port: 80                                              # CHANGE: same port
+              port: 8080                                              # CHANGE: same port
             initialDelaySeconds: 3
             periodSeconds: 10
           livenessProbe:
             tcpSocket:
-              port: 80                                              # CHANGE: same port
+              port: 8080                                              # CHANGE: same port
             initialDelaySeconds: 10
             periodSeconds: 20
           resources:
@@ -46,5 +46,5 @@ spec:
     app: oscar-frontend
   ports:
     - port: 80
-      targetPort: 80
+      targetPort: 8080
       nodePort: 30173
