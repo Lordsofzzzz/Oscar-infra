@@ -25,6 +25,15 @@ jobs:
           token: ${{ secrets.APP_REPO_READ_TOKEN }}
           path: app
 
+
+      - name: Run Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+            scan-type: 'fs'
+            exit-code: '1'
+            severity: 'CRITICAL,HIGH'
+
+
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
