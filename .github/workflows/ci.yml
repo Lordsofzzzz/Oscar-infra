@@ -44,11 +44,11 @@ jobs:
           npm run lint
 
 
-      - name: Run Trivy Security Scan
+      - name: Scan application source with Trivy
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
-          scan-ref: '.'
+          scan-ref: 'app'
           scanners: 'vuln,misconfig,secret'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
@@ -86,6 +86,28 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ env.IMAGE }}-frontend:${{ env.TAG }}
+
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          image-ref: ${{ env.IMAGE }}-backend:${{ env.TAG }}
+          scanners: 'vuln,secret'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '1'
+          format: 'table'
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          image-ref: ${{ env.IMAGE }}-frontend:${{ env.TAG }}
+          scanners: 'vuln,secret'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '1'
+          format: 'table'
 
       - name: Checkout infra repo
         uses: actions/checkout@v4
