@@ -1,6 +1,6 @@
 backend:
   image: ghcr.io/lordsofzzzz/oscar-backend
-  tag: main-eadca41
+  tag: main-f9d7bde
   replicas: 1
   port: 5677
   readinessProbe:
@@ -18,7 +18,7 @@ backend:
 
 frontend:
   image: ghcr.io/lordsofzzzz/oscar-frontend
-  tag: main-eadca41
+  tag: main-f9d7bde
   replicas: 1
   containerPort: 8080
   serviceType: NodePort
