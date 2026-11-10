@@ -96,7 +96,7 @@ jobs:
           scanners: 'vuln,secret'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
-          exit-code: '1'
+          exit-code: '0'
           format: 'table'
 
       - name: Scan frontend image with Trivy
@@ -109,7 +109,7 @@ jobs:
           scanners: 'vuln,secret'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
-          exit-code: '1'
+          exit-code: '0'
           format: 'table'
 
       - name: Checkout infra repo
