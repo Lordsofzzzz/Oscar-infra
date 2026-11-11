@@ -5,6 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m
+  timeout: 15m
   targetNamespace: oscar
   # Pin this so resources are named oscar-frontend/oscar-backend,
   # matching the upstream hardcoded in the frontend image's nginx config.
